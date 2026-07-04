@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { registerSchema } from "../../../../lib/auth/validation";
 import { hashPassword } from "../../../../lib/auth/hash";
@@ -27,6 +27,8 @@ export async function POST(req: Request) {
 
     const passwordHash = await hashPassword(password);
 
+    const referralCode = "AURA-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
     const user = await prisma.user.create({
       data: {
         email,
@@ -34,6 +36,7 @@ export async function POST(req: Request) {
         name,
         role: "FREE",
         plan: "FREE",
+        referralCode,
       },
     });
 

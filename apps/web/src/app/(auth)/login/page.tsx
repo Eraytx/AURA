@@ -89,21 +89,21 @@ export default function LoginPage() {
         <div className="grid grid-cols-3 gap-3">
           <Button
             variant="secondary"
-            onClick={() => router.push("/api/auth/oauth/google/redirect")}
+            onClick={() => window.location.href = "/api/auth/oauth/google/redirect"}
             className="flex items-center justify-center gap-1 text-xs"
           >
             Google
           </Button>
           <Button
             variant="secondary"
-            onClick={() => router.push("/api/auth/oauth/github/redirect")}
+            onClick={() => window.location.href = "/api/auth/oauth/github/redirect"}
             className="flex items-center justify-center gap-1 text-xs"
           >
             GitHub
           </Button>
           <Button
             variant="secondary"
-            onClick={() => router.push("/api/auth/oauth/discord/redirect")}
+            onClick={() => window.location.href = "/api/auth/oauth/discord/redirect"}
             className="flex items-center justify-center gap-1 text-xs"
           >
             Discord

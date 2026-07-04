@@ -28,6 +28,7 @@ export async function GET(
     });
 
     if (!user) {
+      const referralCode = "AURA-" + Math.random().toString(36).substring(2, 8).toUpperCase();
       user = await prisma.user.create({
         data: {
           email: mockEmail,
@@ -35,6 +36,7 @@ export async function GET(
           name: mockName,
           role: "FREE",
           plan: "FREE",
+          referralCode,
         },
       });
     }
