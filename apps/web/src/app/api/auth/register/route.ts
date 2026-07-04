@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { registerSchema } from "../../../../lib/auth/validation";
 import { hashPassword } from "../../../../lib/auth/hash";
+import { signAccessToken, signRefreshToken } from "../../../../lib/auth/jwt";
 import { prisma } from "@aura/database";
 
 export async function POST(req: Request) {
@@ -16,19 +17,16 @@ export async function POST(req: Request) {
 
     // Check duplicate
     const existing = await prisma.user.findFirst({
-      where: {
-        email,
-        deletedAt: null,
-      },
+      where: { email, deletedAt: null },
     });
     if (existing) {
-      return NextResponse.json({ error: "E-posta adresi zaten kullanÄ±mda." }, { status: 409 });
+      return NextResponse.json({ error: "E-posta adresi zaten kullanımda." }, { status: 409 });
     }
 
     const passwordHash = await hashPassword(password);
-
     const referralCode = "AURA-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
+    // Auto-verify email (no real email service configured — verification skipped for test phase)
     const user = await prisma.user.create({
       data: {
         email,
@@ -37,28 +35,30 @@ export async function POST(req: Request) {
         role: "FREE",
         plan: "FREE",
         referralCode,
+        emailVerified: new Date(), // Auto-verify immediately
       },
     });
 
-    // Create verification token
-    const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Create session immediately so user can login right away
+    const accessToken = await signAccessToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+    const refreshToken = await signRefreshToken(user.id);
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    await prisma.emailVerification.create({
+    await prisma.session.create({
       data: {
         userId: user.id,
-        token,
+        refreshToken,
+        userAgent: req.headers.get("user-agent") || "",
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
         expiresAt,
       },
     });
 
-    const origin = req.headers.get("origin") || "http://localhost:3000";
-    const verificationLink = `${origin}/verify-email?token=${token}`;
-    
-    // Output verification link for local simulation
-    console.log(`[EMAIL SIMULATION] Verification Link for ${email}: ${verificationLink}`);
-
-    // Create Audit Log
+    // Audit Log
     await prisma.auditLog.create({
       data: {
         userId: user.id,
@@ -69,13 +69,30 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({
-      message: "KayÄ±t baÅŸarÄ±lÄ±. E-posta doÄŸrulamasÄ± iÃ§in gelen kutunuzu veya konsolu kontrol edin.",
+    const response = NextResponse.json({
+      message: "Kayıt başarılı. Giriş yapabilirsiniz.",
       userId: user.id,
+      accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        plan: user.plan,
+      },
     });
+
+    response.cookies.set("refresh-token", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 30 * 24 * 60 * 60,
+      path: "/",
+    });
+
+    return response;
   } catch (err) {
     console.error("Register error:", err);
-    return NextResponse.json({ error: "KayÄ±t iÅŸlemi sÄ±rasÄ±nda bir hata oluÅŸtu." }, { status: 500 });
+    return NextResponse.json({ error: "Kayıt işlemi sırasında bir hata oluştu." }, { status: 500 });
   }
 }
-

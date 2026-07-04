@@ -25,11 +25,13 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error || "Giriş yapılamadı.");
 
       // Save token to localStorage for header usage
-      localStorage.setItem("access_token", data.accessToken);
+      if (data.accessToken) {
+        localStorage.setItem("access-token", data.accessToken);
+      }
       toast.success("Giriş başarılı! Yönlendiriliyorsunuz...");
       
       setTimeout(() => {
-        router.push("/dashboard");
+        window.location.href = "/tr/dashboard";
       }, 1000);
     } catch (err: any) {
       toast.error(err.message || "Giriş işlemi başarısız.");

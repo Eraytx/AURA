@@ -58,10 +58,14 @@ export default function RegisterPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Kayıt işlemi başarısız.");
 
-      toast.success("Kayıt başarılı! E-posta doğrulama linki gönderildi.");
+      // Store access token and redirect to dashboard directly
+      if (data.accessToken) {
+        localStorage.setItem("access-token", data.accessToken);
+      }
+      toast.success("Kayıt başarılı! Yönlendiriliyorsunuz...");
       setTimeout(() => {
-        router.push("/login");
-      }, 3000);
+        window.location.href = "/tr/dashboard";
+      }, 1000);
     } catch (err: any) {
       toast.error(err.message || "Kayıt sırasında bir hata oluştu.");
     } finally {
