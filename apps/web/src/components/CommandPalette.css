@@ -1,0 +1,13 @@
+/* Custom styles for cmdk command item focus state */
+[cmdk-item][aria-selected="true"] {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: #F0EDE6;
+}
+
+[cmdk-item][aria-selected="true"] svg {
+  color: #D4A017;
+}
+
+[cmdk-item] {
+  transition: all 150ms ease;
+}

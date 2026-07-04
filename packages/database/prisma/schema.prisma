@@ -1,0 +1,266 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  FREE
+  PREMIUM
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  MONTHLY
+  YEARLY
+}
+
+enum OAuthProvider {
+  GOOGLE
+  GITHUB
+  DISCORD
+}
+
+enum Impact {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  emailVerified    DateTime?
+  passwordHash     String?
+  name             String?
+  avatarUrl        String?
+  role             Role      @default(FREE)
+  stripeCustomerId String?   @unique
+  plan             Plan      @default(FREE)
+  planExpiresAt    DateTime?
+  hasCompletedOnboarding Boolean @default(false)
+  preferences      Json?
+  language         String    @default("tr")
+  referralCode     String    @unique @default("")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  sessions           Session[]
+  oauthAccounts      OAuthAccount[]
+  emailVerifications EmailVerification[]
+  passwordResets     PasswordReset[]
+  auditLogs          AuditLog[]
+  favorites          UserFavorite[]
+  subscriptions      Subscription[]
+  invoices           Invoice[]
+  apiKeys            ApiKey[]
+  referredReferrals  Referral[] @relation("Referrer")
+  referredBy         Referral[] @relation("Referred")
+
+  @@index([email])
+  @@index([plan])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshToken])
+}
+
+model OAuthAccount {
+  id                String        @id @default(cuid())
+  userId            String
+  provider          OAuthProvider
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  createdAt         DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model EmailVerification {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  oldValues Json?
+  newValues Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([userId, createdAt])
+}
+
+model NewsEvent {
+  id        String   @id @default(cuid())
+  title     String
+  titleEn   String
+  currency  String
+  impact    Impact
+  forecast  String?
+  actual    String?
+  previous  String?
+  eventTime String
+  category  String?
+  source    String?
+  sourceUrl String?
+  createdAt DateTime @default(now())
+
+  analyses  NewsAnalysis[]
+  favorites UserFavorite[]
+
+  @@index([eventTime])
+  @@index([currency, impact])
+  @@index([createdAt])
+}
+
+model NewsAnalysis {
+  id                String   @id @default(cuid())
+  newsEventId       String   @unique
+  expectation       String?
+  historicalJson    Json?
+  sentiment         Int?
+  sentimentLabel    String?
+  aiImpactScore     Float?
+  volatilityScore   Float?
+  confidenceScore   Float?
+  deviationAnalysis String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  newsEvent NewsEvent @relation(fields: [newsEventId], references: [id], onDelete: Cascade)
+
+  @@index([newsEventId])
+}
+
+model UserFavorite {
+  id          String   @id @default(cuid())
+  userId      String
+  newsEventId String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newsEvent NewsEvent @relation(fields: [newsEventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, newsEventId])
+  @@index([userId])
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String
+  stripeSubscriptionId String   @unique
+  status               String
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Invoice {
+  id                    String   @id @default(cuid())
+  userId                String
+  stripeInvoiceId       String   @unique
+  stripePaymentIntentId String?
+  amount                Int
+  currency              String
+  status                String
+  invoicePdf            String?
+  periodStart           DateTime
+  periodEnd             DateTime
+  createdAt             DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  key        String    @unique
+  keyPrefix  String
+  name       String
+  lastUsedAt DateTime?
+  usageCount Int       @default(0)
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Referral {
+  id          String    @id @default(cuid())
+  referrerId  String
+  referredId  String
+  code        String    @unique
+  status      String    @default("pending")
+  rewardGiven Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  referrer User @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred User @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@index([referredId])
+}

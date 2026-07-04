@@ -1,0 +1,54 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build & Push Production Docker images
+        run: |
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          # Tag with Git SHA
+          docker build -t ghcr.io/${{ github.repository }}/web-production:${{ github.sha }} -t ghcr.io/${{ github.repository }}/web-production:latest -f apps/web/Dockerfile .
+          docker push ghcr.io/${{ github.repository }}/web-production:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}/web-production:latest
+
+          docker build -t ghcr.io/${{ github.repository }}/worker-production:${{ github.sha }} -t ghcr.io/${{ github.repository }}/worker-production:latest -f apps/worker/Dockerfile .
+          docker push ghcr.io/${{ github.repository }}/worker-production:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}/worker-production:latest
+
+      - name: Database Backup and Deploy to production sunucu
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ubuntu
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /app
+            # DB Backup before migration
+            docker exec -t app_postgres_1 pg_dump -U postgres aura_prod | gzip > /backup/before_migrate_${{ github.sha }}.sql.gz
+            
+            # Rolling updates for web container to maintain zero-downtime
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d --no-deps --scale web=2 --no-recreate web
+            
+            # Run DB migration
+            npx prisma migrate deploy
+            
+            # Verify and update
+            docker-compose -f docker-compose.prod.yml up -d web worker
+            curl -f https://aura.com/api/health || (docker-compose rollback && exit 1)
+
+      - name: Notify Slack of Deploy Success
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_TITLE: "AURA XAUUSD Production Deploy Success! 🚀"
+          SLACK_MESSAGE: "Deploy finished successfully for SHA: ${{ github.sha }} by ${{ github.actor }}"

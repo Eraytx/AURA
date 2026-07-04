@@ -1,0 +1,48 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "premium": "Premium",
+    "free": "Free",
+    "upgrade": "Upgrade to Premium"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "subscriptions": "Subscriptions",
+    "news": "News",
+    "logs": "System Logs",
+    "settings": "Settings"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email Address",
+    "password": "Password"
+  },
+  "news": {
+    "calendar": "Economic Calendar",
+    "search_placeholder": "Search news...",
+    "upcoming": "Upcoming Events",
+    "actual": "Actual",
+    "forecast": "Forecast",
+    "previous": "Previous"
+  },
+  "pricing": {
+    "title": "Professional Gold Analysis",
+    "subtitle": "Track XAUUSD volatility surrounding news releases",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save_badge": "Save 33%"
+  }
+}

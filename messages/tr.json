@@ -1,0 +1,48 @@
+{
+  "common": {
+    "loading": "Yükleniyor...",
+    "error": "Bir hata oluştu",
+    "retry": "Tekrar Dene",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "close": "Kapat",
+    "search": "Ara",
+    "filter": "Filtrele",
+    "export": "Dışa Aktar",
+    "premium": "Premium",
+    "free": "Ücretsiz",
+    "upgrade": "Premium Ol"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "users": "Kullanıcılar",
+    "subscriptions": "Abonelikler",
+    "news": "Haberler",
+    "logs": "Sistem Logları",
+    "settings": "Ayarlar"
+  },
+  "auth": {
+    "login": "Giriş Yap",
+    "register": "Kayıt Ol",
+    "logout": "Oturumu Kapat",
+    "email": "E-posta",
+    "password": "Şifre"
+  },
+  "news": {
+    "calendar": "Ekonomik Takvim",
+    "search_placeholder": "Haber ara...",
+    "upcoming": "Yaklaşan Haberler",
+    "actual": "Açıklanan",
+    "forecast": "Beklenti",
+    "previous": "Önceki"
+  },
+  "pricing": {
+    "title": "Profesyonel Altın Analizi",
+    "subtitle": "Haberlerdeki XAUUSD hareketini takip edin",
+    "monthly": "Aylık",
+    "yearly": "Yıllık",
+    "save_badge": "%33 Tasarruf"
+  }
+}
