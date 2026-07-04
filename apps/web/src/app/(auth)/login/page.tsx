@@ -26,7 +26,7 @@ export default function LoginPage() {
 
       // Save token to localStorage for header usage
       if (data.accessToken) {
-        localStorage.setItem("access-token", data.accessToken);
+        localStorage.setItem("access_token", data.accessToken);
       }
       toast.success("Giriş başarılı! Yönlendiriliyorsunuz...");
       

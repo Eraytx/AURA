@@ -60,7 +60,7 @@ export default function RegisterPage() {
 
       // Store access token and redirect to dashboard directly
       if (data.accessToken) {
-        localStorage.setItem("access-token", data.accessToken);
+        localStorage.setItem("access_token", data.accessToken);
       }
       toast.success("Kayıt başarılı! Yönlendiriliyorsunuz...");
       setTimeout(() => {

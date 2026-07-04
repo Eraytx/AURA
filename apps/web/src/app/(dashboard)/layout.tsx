@@ -90,18 +90,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Fetch current user details
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (!token) return;
 
-    fetch("/api/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    // Build headers — if no localStorage token, server will fallback to access-token cookie
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    fetch("/api/auth/me", { headers, credentials: "include" })
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();
       })
       .then((data) => setUser(data.user))
       .catch(() => {
-        // Access token expired, clear client state (middleware will block dashboard accesses)
+        // Access token expired or invalid, clear client state
         localStorage.removeItem("access_token");
         setUser(null);
       });
