@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { prisma } from "@aura/database";
 import { getSessionUser } from "../../../../lib/auth/session";
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 
     // Build CSV Content
     let csv = "ID,Title,TitleEn,Currency,Impact,Forecast,Actual,Previous,EventTime,Source,CreatedAt\n";
-    events.forEach((e) => {
+    events.forEach((e: any) => {
       const cleanTitle = e.title.replace(/"/g, '""');
       const cleanTitleEn = e.titleEn.replace(/"/g, '""');
       csv += `"${e.id}","${cleanTitle}","${cleanTitleEn}","${e.currency}","${e.impact}","${e.forecast || ""}","${e.actual || ""}","${e.previous || ""}","${e.eventTime}","${e.source || ""}","${e.createdAt.toISOString()}"\n`;

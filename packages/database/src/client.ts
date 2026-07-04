@@ -6,7 +6,7 @@ declare global {
 
 const client = new PrismaClient();
 
-client.$use(async (params, next) => {
+client.$use(async (params: any, next: (params: any) => Promise<any>) => {
   const start = Date.now();
   const result = await next(params);
   const duration = Date.now() - start;

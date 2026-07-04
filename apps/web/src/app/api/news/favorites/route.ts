@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { prisma } from "@aura/database";
 import { getSessionUser } from "../../../../lib/auth/session";
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       },
     });
 
-    return NextResponse.json({ data: favorites.map((f) => f.newsEvent) });
+    return NextResponse.json({ data: favorites.map((f: any) => f.newsEvent) });
   } catch (err) {
     return handleApiError(err);
   }
