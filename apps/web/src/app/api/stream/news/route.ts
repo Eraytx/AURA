@@ -1,60 +1,42 @@
 import { NextRequest } from "next/server";
-import Redis from "ioredis";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  let redis: Redis | null = null;
   const encoder = new TextEncoder();
 
   const customStream = new ReadableStream({
-    async start(controller) {
-      // Connect to Redis for subscription
-      const redisUrl = process.env.UPSTASH_REDIS_URL || "redis://localhost:6379";
-      redis = new Redis(redisUrl);
-
-      // Keepalive heartbeat ping interval (every 30s)
+    start(controller) {
+      // Keepalive heartbeat ping interval (every 25s to prevent proxy timeout)
       const heartbeatInterval = setInterval(() => {
         try {
-          controller.enqueue(encoder.encode("event: ping\ndata: keepalive\n\n"));
-        } catch (err) {
+          controller.enqueue(encoder.encode(": keepalive\n\n"));
+        } catch {
           clearInterval(heartbeatInterval);
         }
-      }, 30000);
+      }, 25000);
 
-      // Subscribe to Redis channel
-      redis.subscribe("news:high_impact", (err) => {
-        if (err) {
-          console.error("Redis subscription error in SSE stream:", err);
-          controller.close();
-        }
-      });
-
-      redis.on("message", (channel, message) => {
-        try {
-          controller.enqueue(encoder.encode(`event: message\ndata: ${message}\n\n`));
-        } catch (err) {
-          clearInterval(heartbeatInterval);
-          redis?.disconnect();
-        }
-      });
+      // Redis is not configured in production — SSE will stay alive via heartbeats only
+      // Real-time news events can be pushed here when a Redis/Upstash connection is added
+      console.log("[SSE] Client connected. Heartbeat mode active (no Redis configured).");
 
       // Handle client disconnect
       req.signal.addEventListener("abort", () => {
         clearInterval(heartbeatInterval);
-        redis?.disconnect();
+        console.log("[SSE] Client disconnected.");
       });
     },
     cancel() {
-      redis?.disconnect();
-    }
+      // Stream cancelled
+    },
   });
 
   return new Response(customStream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
-      "Connection": "keep-alive",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no", // Disable Nginx buffering (needed for Railway/Vercel)
     },
   });
 }

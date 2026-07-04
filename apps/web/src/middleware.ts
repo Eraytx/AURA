@@ -94,23 +94,29 @@ export async function middleware(request: NextRequest) {
   // 3. Auth Route Protection based on strippedPath
   const authHeader = request.headers.get("authorization");
   const refreshTokenCookie = request.cookies.get("refresh-token")?.value;
+  const accessTokenCookie = request.cookies.get("access-token")?.value;
 
   let userPayload = null;
+
+  // Check Authorization header first
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split(" ")[1];
-    if (token) {
-      userPayload = await verifyAccessToken(token);
-    }
+    if (token) userPayload = await verifyAccessToken(token);
+  }
+
+  // Fallback: check access-token cookie (OAuth flow)
+  if (!userPayload && accessTokenCookie) {
+    userPayload = await verifyAccessToken(accessTokenCookie);
   }
 
   const isProtectedRoute = strippedPath.startsWith("/dashboard") || strippedPath.startsWith("/api/premium");
   const isAdminRoute = strippedPath.startsWith("/api/admin") || strippedPath.startsWith("/admin");
 
+  // Allow if user has a valid token OR has a refresh-token cookie (client will refresh on /api/auth/me call)
   if (isProtectedRoute && !userPayload && !refreshTokenCookie) {
     if (strippedPath.startsWith("/api")) {
       return new NextResponse(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
-    // Redirect to login page in corresponding language
     return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
   }
 

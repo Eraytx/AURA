@@ -1,7 +1,7 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { prisma } from "@aura/database";
-import { handleApiError, ApiError } from "../../../lib/error";
+import { handleApiError } from "../../../lib/error";
 
 export async function GET(req: Request) {
   try {
@@ -9,36 +9,26 @@ export async function GET(req: Request) {
     const currency = searchParams.get("currency") || undefined;
     const impact = searchParams.get("impact") || undefined;
 
-    // Fetch this week's events
-    const today = new Date();
-    const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const oneWeekLater = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    // Build filters — no date restriction so all seed data is always visible
+    const where: any = {};
+    if (currency) where.currency = currency;
+    if (impact) where.impact = impact.toUpperCase();
 
     const events = await prisma.newsEvent.findMany({
-      where: {
-        createdAt: {
-          gte: oneWeekAgo,
-          lte: oneWeekLater,
-        },
-        ...(currency && { currency }),
-        ...(impact && { impact: impact.toUpperCase() as any }),
-      },
+      where,
       include: {
         analyses: true,
       },
       orderBy: {
-        createdAt: "asc",
+        createdAt: "desc",
       },
+      take: 100, // Limit to 100 most recent events
     });
 
     const response = NextResponse.json({ data: events });
-    
-    // Cache for 5 minutes (s-maxage: 300 seconds)
-    response.headers.set("Cache-Control", "public, s-maxage=300, stale-while-revalidate=60");
-    
+    response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=30");
     return response;
   } catch (err) {
     return handleApiError(err);
   }
 }
-

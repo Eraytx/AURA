@@ -87,40 +87,58 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch current user details
-  useEffect(() => {
+  // Helper: fetch with automatic token refresh
+  const fetchWithAuth = async (url: string): Promise<Response> => {
     const token = localStorage.getItem("access_token");
-
-    // Build headers — if no localStorage token, server will fallback to access-token cookie
     const headers: Record<string, string> = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    fetch("/api/auth/me", { headers, credentials: "include" })
+    const res = await fetch(url, { headers, credentials: "include" });
+
+    // If 401, try to refresh the token using the httpOnly refresh-token cookie
+    if (res.status === 401) {
+      const refreshRes = await fetch("/api/auth/refresh", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (refreshRes.ok) {
+        const { accessToken } = await refreshRes.json();
+        localStorage.setItem("access_token", accessToken);
+        // Retry original request with new token
+        return fetch(url, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          credentials: "include",
+        });
+      }
+      // Refresh also failed — clear local state
+      localStorage.removeItem("access_token");
+    }
+    return res;
+  };
+
+  // Fetch current user details on mount
+  useEffect(() => {
+    fetchWithAuth("/api/auth/me")
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();
       })
       .then((data) => setUser(data.user))
-      .catch(() => {
-        // Access token expired or invalid, clear client state
-        localStorage.removeItem("access_token");
-        setUser(null);
-      });
+      .catch(() => setUser(null));
   }, []);
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
       localStorage.removeItem("access_token");
       setUser(null);
       toast.success("Oturum kapatıldı.");
-      router.push("/login");
+      window.location.href = "/tr/login";
     } catch {
       toast.error("Oturum kapatılırken hata oluştu.");
     }
   };
+
 
   return (
     <PremiumProvider>

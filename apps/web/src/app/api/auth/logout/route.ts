@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { prisma } from "@aura/database";
 
@@ -21,11 +21,19 @@ export async function POST(req: Request) {
       });
     }
 
-    const response = NextResponse.json({ message: "Oturum baÅŸarÄ±yla kapatÄ±ldÄ±." });
+    const response = NextResponse.json({ message: "Oturum başarıyla kapatıldı." });
 
     // Clear refresh-token cookie
     response.cookies.set("refresh-token", "", {
       httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 0,
+      path: "/",
+    });
+
+    // Also clear access-token cookie (set by OAuth flow)
+    response.cookies.set("access-token", "", {
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 0,
