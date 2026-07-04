@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { loginSchema } from "../../../../lib/auth/validation";
 import { verifyPassword } from "../../../../lib/auth/hash";
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
     });
 
     const response = NextResponse.json({
-      message: "GiriÅŸ baÅŸarÄ±lÄ±.",
+      message: "Giriş başarılı.",
       accessToken,
       user: {
         id: user.id,
@@ -120,12 +120,21 @@ export async function POST(req: Request) {
       },
     });
 
-    // Set refresh token in HttpOnly cookie
+    // Set refresh token in HttpOnly cookie (long-lived, secure)
     response.cookies.set("refresh-token", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60, // 30 days
+      path: "/",
+    });
+
+    // Set access token in readable cookie (short-lived, for client reads)
+    response.cookies.set("access-token", accessToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60, // 15 minutes
       path: "/",
     });
 

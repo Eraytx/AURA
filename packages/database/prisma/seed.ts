@@ -14,21 +14,24 @@ async function main() {
 
   console.log("Database is empty. Populating initial seed data...");
 
-  // 1. Seed Admin User
+  // 1. Seed Admin User (upsert to prevent duplicate errors on re-runs)
   const adminPasswordHash = "$2a$12$KkQcO512Vv/P5G5d2tHjOuG7j12yN2fG6w10Z2H2N5L2G5f2Y4eGq";
   
-  const admin = await prisma.user.create({
-    data: {
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@auraxauusd.com" },
+    update: {},
+    create: {
       email: "admin@auraxauusd.com",
       emailVerified: new Date(),
       passwordHash: adminPasswordHash,
       name: "AURA Admin",
       role: "ADMIN",
       plan: "YEARLY",
+      referralCode: "AURA-ADMIN1",
       planExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
     },
   });
-  console.log(`Seeded admin user: ${admin.email}`);
+  console.log(`Admin user ready: ${admin.email}`);
 
   // 2. Seed Sample News Events
   const cpi = await prisma.newsEvent.create({
