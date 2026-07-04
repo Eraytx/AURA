@@ -5,7 +5,7 @@
     "buildCommand": "npm run db:generate && npm run build"
   },
   "deploy": {
-    "startCommand": "npx prisma db push --schema=packages/database/prisma/schema.prisma && npm run start -w web",
+    "startCommand": "npx prisma db push --schema=packages/database/prisma/schema.prisma && npx prisma db seed --schema=packages/database/prisma/schema.prisma && npm run start -w web",
     "restartPolicyType": "ON_FAILURE",
     "healthcheckPath": "/",
     "healthcheckTimeout": 120

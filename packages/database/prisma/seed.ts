@@ -3,19 +3,18 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Seeding database...");
+  console.log("Seeding database check...");
 
-  // 1. Clean existing data
-  await prisma.subscription.deleteMany();
-  await prisma.userFavorite.deleteMany();
-  await prisma.newsAnalysis.deleteMany();
-  await prisma.newsEvent.deleteMany();
-  await prisma.auditLog.deleteMany();
-  await prisma.session.deleteMany();
-  await prisma.user.deleteMany();
+  // Check if seed has already run by counting NewsEvents
+  const existingEventsCount = await prisma.newsEvent.count();
+  if (existingEventsCount > 0) {
+    console.log("Database already has data. Skipping seeding to prevent overwrite.");
+    return;
+  }
 
-  // 2. Seed Admin User
-  // Password hash for 'AdminPassword123!'
+  console.log("Database is empty. Populating initial seed data...");
+
+  // 1. Seed Admin User
   const adminPasswordHash = "$2a$12$KkQcO512Vv/P5G5d2tHjOuG7j12yN2fG6w10Z2H2N5L2G5f2Y4eGq";
   
   const admin = await prisma.user.create({
@@ -26,12 +25,12 @@ async function main() {
       name: "AURA Admin",
       role: "ADMIN",
       plan: "YEARLY",
-      planExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+      planExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
     },
   });
   console.log(`Seeded admin user: ${admin.email}`);
 
-  // 3. Seed Sample News Events
+  // 2. Seed Sample News Events
   const cpi = await prisma.newsEvent.create({
     data: {
       title: "Tüketici Fiyat Endeksi (CPI) Aylık",
