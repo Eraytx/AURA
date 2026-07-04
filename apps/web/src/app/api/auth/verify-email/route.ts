@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { prisma } from "@aura/database";
 
@@ -54,7 +54,9 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "E-posta baÅŸarÄ±yla doÄŸrulandÄ±." });
     }
 
-    const origin = req.headers.get("origin") || new URL(req.url).origin;
+    const host = req.headers.get("x-forwarded-host") || new URL(req.url).host;
+    const proto = req.headers.get("x-forwarded-proto") || "https";
+    const origin = `${proto}://${host}`;
     return NextResponse.redirect(`${origin}/login?verified=true`);
   } catch (err) {
     console.error("Verify email error:", err);

@@ -91,7 +91,10 @@ export async function GET(
       },
     });
 
-    const response = NextResponse.redirect(new URL("/dashboard", req.url));
+    const host = req.headers.get("x-forwarded-host") || new URL(req.url).host;
+    const proto = req.headers.get("x-forwarded-proto") || "https";
+    const origin = `${proto}://${host}`;
+    const response = NextResponse.redirect(new URL("/dashboard", origin));
     
     // Set refresh token cookie
     response.cookies.set("refresh-token", refreshToken, {

@@ -13,7 +13,9 @@ export async function GET(
 
   // Generate OAuth redirect mock URL
   // Redirecting straight back to our local callback with mock parameters to simulate completed login flow!
-  const origin = new URL(req.url).origin;
+  const host = req.headers.get("x-forwarded-host") || new URL(req.url).host;
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  const origin = `${proto}://${host}`;
   const mockCode = `mock_code_${Math.random().toString(36).substring(7)}`;
   const callbackUrl = `${origin}/api/auth/oauth/${params.provider}/callback?code=${mockCode}&state=aura_state`;
 
