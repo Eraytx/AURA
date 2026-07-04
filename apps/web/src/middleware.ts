@@ -8,7 +8,10 @@ import { env } from "./lib/env";
 let ratelimit: Ratelimit | null = null;
 
 try {
-  if (env.UPSTASH_REDIS_URL && env.UPSTASH_REDIS_URL !== "") {
+  const isLocalhost = env.UPSTASH_REDIS_URL.includes("localhost") || env.UPSTASH_REDIS_URL.includes("127.0.0.1");
+  const isProd = process.env.NODE_ENV === "production";
+
+  if (env.UPSTASH_REDIS_URL && env.UPSTASH_REDIS_URL !== "" && (!isProd || !isLocalhost)) {
     const redis = new Redis({
       url: env.UPSTASH_REDIS_URL,
       token: env.UPSTASH_REDIS_TOKEN || "",
