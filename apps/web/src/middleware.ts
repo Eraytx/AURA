@@ -120,11 +120,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 4. Security Headers and Strict CSP Nonce Generation
-  const nonce = btoa(crypto.randomUUID());
+  // 4. Security Headers and standard CSP
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""};
+    script-src 'self' 'unsafe-inline' 'unsafe-eval';
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https://query1.finance.yahoo.com;
     font-src 'self' data:;
@@ -140,7 +139,6 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.rewrite(rewriteUrl);
   
   response.headers.set("Content-Security-Policy", cspHeader);
-  response.headers.set("x-nonce", nonce);
   response.headers.set("x-locale", locale); // Pass locale header to components
   
   // Set NEXT_LOCALE cookie to keep language persisted for 30 days
