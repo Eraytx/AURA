@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, Button, toast } from "@aura/ui";
 import { Check, HelpCircle, ArrowRight, ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 const FAQS = [
   {
@@ -34,33 +34,35 @@ const FAQS = [
 
 export default function PricingPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = pathname?.split("/")[1] || "tr";
   const [isYearly, setIsYearly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const handleSubscribe = async (plan: "MONTHLY" | "YEARLY") => {
     const token = localStorage.getItem("access_token");
-    if (!token) {
-      toast.warning("Lütfen abonelik satın almadan önce giriş yapın.");
-      router.push(`/login?redirect=/pricing`);
-      return;
-    }
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
     setLoading(true);
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ plan })
+        headers,
+        credentials: "include",
+        body: JSON.stringify({ plan }),
       });
 
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error);
+      if (res.status === 401) {
+        toast.warning("Lütfen abonelik satın almadan önce giriş yapın.");
+        router.push(`/${locale}/login?redirect=/${locale}/pricing`);
+        return;
+      }
 
-      // Redirect to Stripe checkout URL
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || d.message || "Bilinmeyen hata");
+
       if (d.url) {
         window.location.href = d.url;
       }

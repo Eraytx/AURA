@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Badge, Input, Button } from "@aura/ui";
-import { Search, Calendar, Clock, AlertTriangle } from "lucide-react";
+import { Search, Calendar, Clock } from "lucide-react";
 import { useNewsStream } from "../hooks/useNewsStream";
 
 interface NewsEvent {
@@ -26,6 +26,101 @@ interface EconomicCalendarProps {
   onEventsUpdated: (updatedEvents: NewsEvent[]) => void;
 }
 
+/** Calculate countdown string from an HH:mm eventTime string (assumed today/next occurrence) */
+function useCountdown(eventTime: string): string {
+  const [label, setLabel] = useState("");
+
+  useEffect(() => {
+    const compute = () => {
+      if (!eventTime || !eventTime.includes(":")) {
+        setLabel(eventTime || "—");
+        return;
+      }
+      const [hStr, mStr] = eventTime.split(":");
+      const h = parseInt(hStr, 10);
+      const m = parseInt(mStr, 10);
+      if (isNaN(h) || isNaN(m)) {
+        setLabel(eventTime);
+        return;
+      }
+
+      const now = new Date();
+      const target = new Date();
+      target.setHours(h, m, 0, 0);
+
+      // If already passed today, show as "Açıklandı"
+      const diffMs = target.getTime() - now.getTime();
+      if (diffMs < 0) {
+        setLabel(`${eventTime} • Açıklandı`);
+        return;
+      }
+
+      const totalSec = Math.floor(diffMs / 1000);
+      const hours = Math.floor(totalSec / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+
+      if (hours > 0) {
+        setLabel(`${eventTime} • ${hours}s ${mins}dk`);
+      } else if (mins > 0) {
+        setLabel(`${eventTime} • ${mins}dk ${secs}sn`);
+      } else {
+        setLabel(`${eventTime} • ${secs}sn`);
+      }
+    };
+
+    compute();
+    const id = setInterval(compute, 1000);
+    return () => clearInterval(id);
+  }, [eventTime]);
+
+  return label;
+}
+
+/** Single event row with its own countdown */
+function EventRow({
+  event,
+  isSelected,
+  onSelectEvent,
+}: {
+  event: NewsEvent;
+  isSelected: boolean;
+  onSelectEvent: (e: NewsEvent) => void;
+}) {
+  const countdown = useCountdown(event.eventTime);
+
+  return (
+    <div
+      className={`h-full p-3 rounded-lg border text-left cursor-pointer transition-all flex flex-col justify-between ${
+        isSelected
+          ? "border-gold bg-gold/5 shadow-[0_0_15px_rgba(212,160,23,0.04)]"
+          : "border-border bg-background-card hover:bg-background-secondary"
+      }`}
+      onClick={() => onSelectEvent(event)}
+    >
+      <div className="flex justify-between items-start gap-1">
+        <span className="text-xs font-bold text-text-primary truncate max-w-[150px]">
+          {event.titleEn}
+        </span>
+        <Badge variant={event.impact.toLowerCase() as any}>{event.impact}</Badge>
+      </div>
+
+      <div className="flex justify-between items-center text-[10px] text-text-muted mt-1">
+        <span className="flex items-center gap-1 text-gold/80 font-mono">
+          <Clock className="h-3 w-3" />
+          {countdown}
+        </span>
+      </div>
+
+      <div className="flex gap-2 text-[10px] text-text-muted mt-1">
+        <span>Bek: <strong className="text-text-primary">{event.forecast || "—"}</strong></span>
+        <span>Ger: <strong className={event.actual ? "text-gold" : "text-text-muted"}>{event.actual || "—"}</strong></span>
+        <span>Önc: <strong className="text-text-muted">{event.previous || "—"}</strong></span>
+      </div>
+    </div>
+  );
+}
+
 export function EconomicCalendar({
   events,
   selectedEvent,
@@ -40,7 +135,6 @@ export function EconomicCalendar({
   // Subscribe to real-time events via custom SSE hook
   useNewsStream((newEvent) => {
     const nextEvents = events.map((ev) => (ev.id === newEvent.id ? newEvent : ev));
-    // If it's a completely new event, prepend it
     if (!events.some((ev) => ev.id === newEvent.id)) {
       nextEvents.unshift(newEvent);
     }
@@ -59,9 +153,8 @@ export function EconomicCalendar({
     });
   }, [events, search, usdOnly, highOnly]);
 
-  // Group by Date for virtualization
+  // Group by Date
   const virtualRows = useMemo(() => {
-    // Generate a flat array of headers and items
     const rows: ({ type: "header"; date: string } | { type: "item"; event: NewsEvent })[] = [];
     const grouped: { [key: string]: NewsEvent[] } = {};
 
@@ -85,11 +178,10 @@ export function EconomicCalendar({
     return rows;
   }, [filtered]);
 
-  // TanStack Virtualizer
   const rowVirtualizer = useVirtualizer({
     count: virtualRows.length,
     getScrollElement: () => listContainerRef.current,
-    estimateSize: (index) => (virtualRows[index]?.type === "header" ? 36 : 94),
+    estimateSize: (index) => (virtualRows[index]?.type === "header" ? 36 : 104),
     overscan: 10,
   });
 
@@ -169,7 +261,6 @@ export function EconomicCalendar({
               return (
                 <div
                   key={virtualRow.key}
-                  onClick={() => onSelectEvent(event)}
                   style={{
                     position: "absolute",
                     top: 0,
@@ -180,31 +271,11 @@ export function EconomicCalendar({
                     paddingBottom: "8px",
                   }}
                 >
-                  <div
-                    className={`h-full p-3 rounded-lg border text-left cursor-pointer transition-all flex flex-col justify-between ${
-                      isSelected
-                        ? "border-gold bg-gold/5 shadow-[0_0_15px_rgba(212,160,23,0.04)]"
-                        : "border-border bg-background-card hover:bg-background-secondary"
-                    }`}
-                  >
-                    <div className="flex justify-between items-start gap-1">
-                      <span className="text-xs font-bold text-text-primary truncate max-w-[150px]">
-                        {event.titleEn}
-                      </span>
-                      <Badge variant={event.impact.toLowerCase() as any}>{event.impact}</Badge>
-                    </div>
-
-                    <div className="flex justify-between items-center text-[10px] text-text-muted">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {event.eventTime}
-                      </span>
-                      <div className="flex gap-2">
-                        <span>Bek: <strong className="text-text-primary">{event.forecast || "—"}</strong></span>
-                        <span>Ger: <strong className={event.actual ? "text-gold" : "text-text-muted"}>{event.actual || "—"}</strong></span>
-                      </div>
-                    </div>
-                  </div>
+                  <EventRow
+                    event={event}
+                    isSelected={isSelected}
+                    onSelectEvent={onSelectEvent}
+                  />
                 </div>
               );
             })}

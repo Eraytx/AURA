@@ -21,17 +21,32 @@ export default function DashboardPage() {
   // 1. Fetch user data to determine premium state
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (!token) return;
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    fetch("/api/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch("/api/auth/me", { headers, credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         const u = data?.user;
         setIsPremium(u && (u.role === "PREMIUM" || u.role === "ADMIN" || u.plan !== "FREE"));
       })
       .catch(() => setIsPremium(false));
+  }, []);
+
+  // Show upgrade success toast when redirected back from Stripe
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("upgraded") === "true") {
+      const plan = params.get("plan") || "";
+      toast.success(`🌟 Premium Üyelik Aktif! ${plan === "YEARLY" ? "Yıllık" : "Aylık"} planınız başladı.`);
+      // Remove query param without page reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete("upgraded");
+      url.searchParams.delete("plan");
+      window.history.replaceState({}, "", url.toString());
+      // Reload to refresh premium state
+      setTimeout(() => window.location.reload(), 1500);
+    }
   }, []);
 
   // 2. Fetch news events from database

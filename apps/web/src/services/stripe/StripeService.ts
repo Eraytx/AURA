@@ -81,19 +81,33 @@ export class StripeService {
 
     const client = this.getClient();
     if (!client) {
-      // Mock flow redirect to client-side callback upgraded=true
-      console.log(`[MOCK STRIPE] Checkout Session initiated for User: ${userId}, Plan: ${plan}`);
-      return `${env.NEXT_PUBLIC_APP_URL}/dashboard?upgraded=true&mock_plan=${plan}`;
+      // Mock mode: upgrade user immediately in DB, then redirect to dashboard
+      console.log(`[MOCK STRIPE] Checkout initiated for User: ${userId}, Plan: ${plan}`);
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + (plan === "MONTHLY" ? 1 : 12));
+      await prisma.user.update({
+        where: { id: userId },
+        data: { plan, role: "PREMIUM", planExpiresAt: expiresAt },
+      });
+      // Use Railway URL or fallback to relative path
+      const baseUrl = env.NEXT_PUBLIC_APP_URL?.startsWith("http")
+        ? env.NEXT_PUBLIC_APP_URL
+        : "https://aura-production-27e1.up.railway.app";
+      return `${baseUrl}/tr/dashboard?upgraded=true&plan=${plan}`;
     }
 
     const priceId = PLANS[plan].priceId;
+    const baseUrl = env.NEXT_PUBLIC_APP_URL?.startsWith("http")
+      ? env.NEXT_PUBLIC_APP_URL
+      : "https://aura-production-27e1.up.railway.app";
+
     const session = await client.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
-      success_url: `${env.NEXT_PUBLIC_APP_URL}/dashboard?upgraded=true`,
-      cancel_url: `${env.NEXT_PUBLIC_APP_URL}/pricing`,
+      success_url: `${baseUrl}/tr/dashboard?upgraded=true`,
+      cancel_url: `${baseUrl}/tr/pricing`,
       metadata: { userId, plan },
     });
 

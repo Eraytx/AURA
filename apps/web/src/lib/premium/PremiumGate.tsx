@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Button } from "@aura/ui";
 import { Lock } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export const PREMIUM_FEATURES = {
   history: "Geçmiş haberler",
@@ -46,31 +46,22 @@ export function PremiumProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (!token) return;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    fetch("/api/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch("/api/auth/me", { headers, credentials: "include" })
       .then((res) => res.json())
       .then((d) => {
         const u = d.user;
         if (u) {
           const isPremiumUser = u.role === "PREMIUM" || u.role === "ADMIN" || u.plan !== "FREE";
           const isAdminUser = u.role === "ADMIN";
-          
           let daysLeft = 0;
           if (u.planExpiresAt) {
             const diffTime = new Date(u.planExpiresAt).getTime() - Date.now();
             daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
           }
-
-          setValue({
-            isPremium: isPremiumUser,
-            isAdmin: isAdminUser,
-            plan: u.plan,
-            expiresAt: u.planExpiresAt,
-            daysLeft,
-          });
+          setValue({ isPremium: isPremiumUser, isAdmin: isAdminUser, plan: u.plan, expiresAt: u.planExpiresAt, daysLeft });
         }
       })
       .catch(() => {});
@@ -85,6 +76,9 @@ export function usePremium() {
 
 export function LockedOverlay() {
   const router = useRouter();
+  const pathname = usePathname();
+  // Detect locale prefix (e.g. /tr/dashboard -> "tr")
+  const locale = pathname?.split("/")[1] || "tr";
 
   return (
     <div className="absolute inset-0 bg-background-primary/70 backdrop-blur-md z-30 flex flex-col items-center justify-center border border-border/40 rounded-xl p-6 text-center select-none animate-in fade-in-50 duration-200">
@@ -96,7 +90,7 @@ export function LockedOverlay() {
         Bu özellik Premium abonelerimize özeldir. AI simülatörü, geçmiş analizler ve API erişimini hemen açın.
       </p>
       <Button
-        onClick={() => router.push("/pricing")}
+        onClick={() => router.push(`/${locale}/pricing`)}
         className="px-6 py-2 h-10 text-xs font-bold shadow-lg shadow-gold/10 transition-all hover:shadow-gold/20"
       >
         Premium Ol — $9.99/ay
